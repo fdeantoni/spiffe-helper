@@ -152,6 +152,8 @@ func (s *Sidecar) dumpBundles(svidResponse *workloadapi.X509Context) error {
 	}
 	bundles := bundleSet.X509Authorities()
 	privateKey, err := x509.MarshalPKCS8PrivateKey(svid.PrivateKey)
+	privateKeyAlgorithm := certs[0].PublicKeyAlgorithm
+
 	if err != nil {
 		return err
 	}
@@ -166,7 +168,7 @@ func (s *Sidecar) dumpBundles(svidResponse *workloadapi.X509Context) error {
 		return err
 	}
 
-	if err := writeKey(svidKeyFile, privateKey); err != nil {
+	if err := writeKey(svidKeyFile, privateKey, privateKeyAlgorithm); err != nil {
 		return err
 	}
 
@@ -215,9 +217,20 @@ func writeCerts(file string, certs []*x509.Certificate) error {
 
 // writeKey takes a private key as a slice of bytes,
 // formats as PEM, and writes it to file
-func writeKey(file string, data []byte) error {
+func writeKey(file string, data []byte, algo x509.PublicKeyAlgorithm) error {
+
+	var pemType string = "PRIVATE KEY"
+	switch algo {
+	case x509.RSA:
+		pemType = "RSA PRIVATE KEY"
+	case x509.ECDSA:
+		pemType = "EC PRIVATE KEY"
+	default:
+		pemType = "PRIVATE KEY"
+	}
+
 	b := &pem.Block{
-		Type:  "EC PRIVATE KEY",
+		Type:  pemType,
 		Bytes: data,
 	}
 
